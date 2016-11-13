@@ -1,0 +1,220 @@
+ <html>
+    <script type="text/javascript">
+    var canvas, ctx, ctx2, flag = false,
+    	thickness = 3,
+    	offset = 400,
+        angle = 5,
+        prevX = 0,
+        currX = 0,
+        prevY = 0,
+        currY = 0,
+        rotatedPrev = 0,
+        rotatedCurr = 0,
+        dot_flag = false,
+        fillFlag = false;
+    var w,h;
+    var x = "black",
+        y = thickness;
+    
+    function init() {
+        canvas = document.getElementById('can');
+        ctx = canvas.getContext("2d");
+        ctx2 = canvas.getContext("2d");
+        w = canvas.width;
+        h = canvas.height;
+    
+        canvas.addEventListener("mousemove", function (e) {
+            findxy('move', e)
+        }, false);
+        canvas.addEventListener("mousedown", function (e) {
+            findxy('down', e)
+        }, false);
+        canvas.addEventListener("mouseup", function (e) {
+            findxy('up', e)
+        }, false);
+        canvas.addEventListener("mouseout", function (e) {
+            findxy('out', e)
+        }, false);
+    }
+    
+    function color(obj) {
+        switch (obj.id) {
+            case "green":
+                x = "green";
+                break;
+            case "blue":
+                x = "blue";
+                break;
+            case "red":
+                x = "red";
+                break;
+            case "yellow":
+                x = "yellow";
+                break;
+            case "orange":
+                x = "orange";
+                break;
+            case "black":
+                x = "black";
+                break;
+            case "white":
+                x = "white";
+                break;
+        }
+        if (x == "white") y = 14;
+        else y = thickness;
+    
+    }
+    
+    function draw() {
+    	console.log("drawing")
+        ctx.beginPath();
+        ctx.moveTo(prevX, prevY);
+        ctx.lineTo(currX, currY);
+        ctx.strokeStyle = x;
+        ctx.lineWidth = y;
+        ctx.stroke();
+        ctx.closePath();
+
+		ctx2.beginPath();
+
+        for (var i = angle; i < 360; i+=angle){
+        	rotatedPrev = rotate(prevX-offset,prevY-offset,i);
+        	rotatedCurr = rotate(currX-offset,currY-offset,i);
+			ctx2.moveTo(rotatedPrev[0]+offset, rotatedPrev[1]+offset);
+	        ctx2.lineTo(rotatedCurr[0]+offset, rotatedCurr[1]+offset);
+        }
+        ctx2.strokeStyle = x;
+        ctx2.lineWidth = y;
+        ctx2.stroke();
+        ctx2.closePath();    
+    }
+
+    function fill(){
+        fillFlag = ! fillFlag;
+    }
+    
+    function erase() {
+        var m = confirm("Want to clear");
+        if (m) {
+            ctx.clearRect(0, 0, w, h);
+            document.getElementById("canvasimg").style.display = "none";
+        }
+    }
+    
+    function save() {
+        document.getElementById("canvasimg").style.border = "2px solid";
+        var dataURL = canvas.toDataURL();
+        document.getElementById("canvasimg").src = dataURL;
+        document.getElementById("canvasimg").style.display = "inline";
+    }
+
+    function rotate(x, y, angle) {
+	    var radians = (Math.PI / 180) * angle,
+	        cos = Math.cos(radians),
+	        sin = Math.sin(radians),
+	        nx = (cos * x) + (sin * y),
+	        ny = (cos * y) - (sin * x);
+	    return [nx, ny];
+	}
+
+    function floodfill(ctx, startX, startY, newColor, width, height){
+        var currentColor = ctx.getImageData(startX,startY,1,1).data;
+        if (currentColor.toString() == newColor.toString()){
+          console.log("hmmm")
+          return;
+        }
+        var Q = [];
+        var processed = [];
+        Q.push([startX,startY]);
+        var n;
+        while(Q.length > 0){
+          n = Q.shift();
+          var color = ctx.getImageData(n[0],n[1],1,1).data;
+          if (currentColor[0] - color[0] < 10 && 
+            currentColor[1] - color[1] < 10 && 
+            currentColor[2] - color[2] < 10 &&
+            currentColor[3] == color[3]) {
+            ctx.fillStyle = "rgba("+newColor[0]+","+newColor[1]+","+newColor[2]+","+(newColor[3]/255)+")";
+            ctx.fillRect( n[0], n[1], 1, 1 );
+            if (n[0] > 0 && n[0] < width && n[1]+1 > 0 && n[1]+1 < height && processed[n[0]+","+(n[1]+1)] === undefined)
+              Q.push([n[0],n[1]+1]);
+            if (n[0] > 0 && n[0] < width && n[1]-1 > 0 && n[1]-1 < height && processed[n[0]+","+(n[1]-1)] === undefined)
+              Q.push([n[0],n[1]-1]);
+            if (n[0]-1 > 0 && n[0]-1 < width && n[1] > 0 && n[1] < height && processed[(n[0]-1)+","+n[1]] === undefined)
+              Q.push([n[0]-1,n[1]]);
+            if (n[0]+1 > 0 && n[0]+1 < width && n[1] > 0 && n[1] < height && processed[(n[0]+1)+","+n[1]] === undefined)
+              Q.push([n[0]+1,n[1]]);
+            processed.push(n[0]+","+n[1]);
+
+          }
+        }
+        Q = [];
+        processed = [];
+      }
+
+    
+    function findxy(res, e) {
+        if (res == 'down') {
+            
+            prevX = currX;
+            prevY = currY;
+            currX = e.clientX - canvas.offsetLeft;
+            currY = e.clientY - canvas.offsetTop;
+            if (fillFlag){
+                for (var i = 0; i < 360; i+=angle){
+                    rotatedCurr = rotate(currX-offset,currY-offset,i);
+                    floodfill(ctx,rotatedCurr[0]+offset,rotatedCurr[1]+offset,[255,0,255,255],w,h)
+                }
+                return;
+            }
+            flag = true;
+            dot_flag = true;
+            if (dot_flag) {
+            	console.log("dot")
+                ctx.beginPath();
+                ctx.fillStyle = x;
+                ctx.fillRect(currX, currY, thickness, thickness);
+                ctx.closePath();
+ 				ctx2.beginPath();
+                ctx2.fillStyle = x;
+
+                for (var i = angle; i < 360; i+=angle){
+	                rotatedCurr = rotate(currX-offset,currY-offset,i);
+	              	ctx2.fillRect(rotatedCurr[0]+offset, rotatedCurr[1]+offset, thickness, thickness);
+	            }
+                ctx2.closePath();
+                dot_flag = false;
+            }
+        }
+        if (res == 'up' || res == "out") {
+            flag = false;
+        }
+        if (res == 'move') {
+            if (flag) {
+                prevX = currX;
+                prevY = currY;
+                currX = e.clientX - canvas.offsetLeft;
+                currY = e.clientY - canvas.offsetTop;
+                draw();
+            }
+        }
+    }
+    </script>
+    <body onload="init()">
+        <canvas id="can" width="800" height="800" style="position:absolute;top:10%;left:10%;border:2px solid;"></canvas>
+        <div style="position:absolute;top:12%;left:43%;">Choose Color</div>
+        <div style="position:absolute;top:10%;left:40%;width:10px;height:10px;background:green;" id="green" onclick="fill()">FILL</div>
+        <div style="position:absolute;top:15%;left:45%;width:10px;height:10px;background:green;" id="green" onclick="color(this)"></div>
+        <div style="position:absolute;top:15%;left:46%;width:10px;height:10px;background:blue;" id="blue" onclick="color(this)"></div>
+        <div style="position:absolute;top:15%;left:47%;width:10px;height:10px;background:red;" id="red" onclick="color(this)"></div>
+        <div style="position:absolute;top:17%;left:45%;width:10px;height:10px;background:yellow;" id="yellow" onclick="color(this)"></div>
+        <div style="position:absolute;top:17%;left:46%;width:10px;height:10px;background:orange;" id="orange" onclick="color(this)"></div>
+        <div style="position:absolute;top:17%;left:47%;width:10px;height:10px;background:black;" id="black" onclick="color(this)"></div>
+        <div style="position:absolute;top:20%;left:43%;">Eraser</div>
+        <div style="position:absolute;top:22%;left:45%;width:15px;height:15px;background:white;border:2px solid;" id="white" onclick="color(this)"></div>
+        <img id="canvasimg" style="position:absolute;top:10%;left:52%;" style="display:none;">
+        <input type="button" value="save" id="btn" size="30" onclick="save()" style="position:absolute;top:55%;left:10%;">
+        <input type="button" value="clear" id="clr" size="23" onclick="erase()" style="position:absolute;top:55%;left:15%;">
+    </body>
+    </html>
